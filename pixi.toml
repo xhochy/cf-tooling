@@ -1,0 +1,14 @@
+[workspace]
+authors = ["Uwe L. Korn <uwe.korn@quantco.com>"]
+channels = ["conda-forge"]
+name = "tooling"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.14.*"
+requests = ">=2.32.5,<3"
+pyyaml = ">=6.0.3,<7"
+packaging = ">=25.0,<26"
