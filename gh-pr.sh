@@ -11,7 +11,7 @@ gh-pr() {
     local url="$1"
 
     # Strip fragment (everything from # onwards)
-    url="${url%%#*}"
+    url="${url%%\#*}"
 
     # Extract owner, repo, and PR number from URL
     # Expected format: https://github.com/owner/repo/pull/123
