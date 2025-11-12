@@ -392,7 +392,7 @@ def main():
         print()
 
     # Define target minor series
-    target_series = ['1.20', '1.21', '1.22', '1.23']
+    target_series = ['1.20', '1.21', '1.22', '1.23', '1.24']
 
     # Get latest versions from GitHub for each series
     latest_github_versions = get_go_versions_by_minor_series(target_series)
