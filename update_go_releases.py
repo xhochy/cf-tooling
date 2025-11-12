@@ -93,24 +93,6 @@ def get_go_versions_by_minor_series(target_series):
     return latest_by_series
 
 
-def get_conda_forge_go_version():
-    """Get the current Go version from conda-forge (main channel)."""
-    url = "https://api.anaconda.org/package/conda-forge/go"
-    response = requests.get(url)
-    response.raise_for_status()
-
-    files = response.json()["files"]
-    # Filter out broken packages
-    files = [f for f in files if "broken" not in f.get("labels", ())]
-
-    if not files:
-        return None
-
-    # Get the latest version
-    latest = max(files, key=lambda x: parse_version(x["version"]))
-    return latest["version"]
-
-
 def get_current_version_from_meta(repo_path):
     """Extract current version from meta.yaml."""
     meta_yaml_path = os.path.join(repo_path, "recipe", "meta.yaml")
