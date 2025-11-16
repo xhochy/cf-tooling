@@ -26,28 +26,18 @@ import re
 import sys
 from packaging.version import parse as parse_version
 from collections import defaultdict
-
-
-def get_github_tags(owner, repo):
-    """Fetch all tags from a GitHub repository."""
-    tags = []
-    page = 1
-    per_page = 100
-
-    while True:
-        url = f"https://api.github.com/repos/{owner}/{repo}/tags"
-        params = {"page": page, "per_page": per_page}
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-
-        page_tags = response.json()
-        if not page_tags:
-            break
-
-        tags.extend(page_tags)
-        page += 1
-
-    return tags
+from feedstock_utils import (
+    get_github_tags,
+    get_current_version_from_recipe,
+    fork_and_clone_feedstock,
+    checkout_branch,
+    create_update_branch,
+    commit_changes,
+    run_conda_smithy_rerender,
+    push_branch,
+    create_pull_request,
+    check_version_needs_update
+)
 
 
 def get_nodejs_versions_by_minor_series(target_series):
@@ -92,31 +82,7 @@ def get_nodejs_versions_by_minor_series(target_series):
     return latest_by_series
 
 
-def get_current_version_from_recipe(repo_path):
-    """Extract current version from meta.yaml or recipe.yaml."""
-    # Try recipe.yaml first (newer format)
-    recipe_yaml_path = os.path.join(repo_path, "recipe", "recipe.yaml")
-    if os.path.exists(recipe_yaml_path):
-        with open(recipe_yaml_path, "r") as f:
-            content = f.read()
 
-        # Look for version in context section: "  version: x.y.z"
-        match = re.search(r'^\s*version:\s*([0-9.]+)', content, re.MULTILINE)
-        if match:
-            return match.group(1)
-
-    # Fall back to meta.yaml (older format)
-    meta_yaml_path = os.path.join(repo_path, "recipe", "meta.yaml")
-    if os.path.exists(meta_yaml_path):
-        with open(meta_yaml_path, "r") as f:
-            content = f.read()
-
-        # Look for {% set version = "x.y.z" %}
-        match = re.search(r'{%\s*set\s+version\s*=\s*["\']([^"\']+)["\']\s*%}', content)
-        if match:
-            return match.group(1)
-
-    return None
 
 
 def get_nodejs_sha256_mappings(version):
@@ -189,42 +155,26 @@ def update_feedstock(feedstock_name, minor_series, new_version, dry_run=False):
     print(f"{'='*60}")
 
     # Fork and clone if needed
-    if os.path.exists(repo_path):
-        print(f"Repository {repo_path} already exists, updating...")
-        subprocess.run(["git", "-C", repo_path, "fetch", "upstream"], check=True)
-    else:
-        print(f"Forking and cloning {repo_name}...")
-        subprocess.run(["gh", "repo", "fork", repo_name, "--clone"], check=True)
+    fork_and_clone_feedstock(repo_name, repo_path)
 
     # Checkout the minor series branch
-    print(f"Checking out upstream/{branch_name}...")
-    try:
-        subprocess.run(["git", "-C", repo_path, "checkout", branch_name], check=True, capture_output=True)
-        subprocess.run(["git", "-C", repo_path, "pull", "upstream", branch_name], check=True)
-    except subprocess.CalledProcessError:
+    if not checkout_branch(repo_path, branch_name):
         print(f"Warning: Branch {branch_name} does not exist in {feedstock_name}. Skipping.")
         return False
 
     # Check current version
     current_version = get_current_version_from_recipe(repo_path)
-    if current_version:
-        print(f"Current version in {branch_name}: {current_version}")
-
-        if parse_version(new_version) <= parse_version(current_version):
-            print(f"Version {current_version} is up-to-date. Skipping.")
-            return False
-
-        print(f"Update available: {current_version} -> {new_version}")
-    else:
-        print("Warning: Could not determine current version, proceeding with update...")
+    print(f"Current version in {branch_name}: {current_version}")
+    
+    if not check_version_needs_update(current_version, new_version):
+        return False
 
     if dry_run:
         print(f"\n[DRY RUN] Would update {feedstock_name} from {current_version} to {new_version}")
         return True
 
     # Create new update branch
-    print(f"Creating update branch {update_branch}...")
-    subprocess.run(["git", "-C", repo_path, "checkout", "-b", update_branch], check=True)
+    create_update_branch(repo_path, update_branch)
 
     # Fetch SHA256 hashes for Node.js distributions
     print(f"Fetching SHA256 hashes for Node.js {new_version}...")
@@ -324,66 +274,16 @@ def update_feedstock(feedstock_name, minor_series, new_version, dry_run=False):
     print(f"Updated {'recipe.yaml' if is_recipe_yaml else 'meta.yaml'} (version, sha256 hashes, and build number)")
 
     # Commit the recipe changes
-    print("Committing recipe changes...")
-    if os.path.exists(recipe_yaml_path):
-        recipe_file = "recipe/recipe.yaml"
-    else:
-        recipe_file = "recipe/meta.yaml"
-
-    subprocess.run(
-        ["git", "-C", repo_path, "add", recipe_file],
-        check=True
-    )
-    subprocess.run(
-        ["git", "-C", repo_path, "commit", "-m", f"Update to {new_version}"],
-        check=True
-    )
+    recipe_file = "recipe/recipe.yaml" if os.path.exists(recipe_yaml_path) else "recipe/meta.yaml"
+    commit_changes(repo_path, [recipe_file], f"Update to {new_version}")
 
     # Run conda-smithy rerender
-    print("Running conda-smithy rerender...")
-    result = subprocess.run(
-        ["conda-smithy", "rerender", "--no-check-uptodate"],
-        cwd=repo_path,
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        print(f"Warning: conda-smithy rerender failed: {result.stderr}")
-        print("Continuing anyway...")
-    else:
-        print("Rerender completed successfully")
-
-        # Check if there are changes to commit
-        status_result = subprocess.run(
-            ["git", "-C", repo_path, "status", "--porcelain"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-
-        if status_result.stdout.strip():
-            print("Committing rerender changes...")
-            subprocess.run(
-                ["git", "-C", repo_path, "add", "-A"],
-                check=True
-            )
-            subprocess.run(
-                ["git", "-C", repo_path, "commit", "-m", "MNT: Re-rendered with conda-smithy"],
-                check=True
-            )
-        else:
-            print("No changes from rerender to commit")
+    run_conda_smithy_rerender(repo_path)
 
     # Push to fork
-    print(f"Pushing {update_branch} to origin...")
-    subprocess.run(
-        ["git", "-C", repo_path, "push", "-u", "origin", update_branch],
-        check=True
-    )
+    push_branch(repo_path, update_branch)
 
     # Create pull request
-    print("Creating pull request...")
     pr_title = f"Update to Node.js {new_version}"
     pr_body = f"""This PR updates the Node.js version to {new_version}.
 
@@ -394,19 +294,7 @@ Changes:
 - Re-rendered with conda-smithy
 """
 
-    pr_result = subprocess.run(
-        ["gh", "pr", "create",
-         "-R", repo_name,
-         "--base", branch_name,
-         "--title", pr_title,
-         "--body", pr_body],
-        cwd=repo_path,
-        capture_output=True,
-        text=True,
-        check=True
-    )
-
-    print(f"Pull request created: {pr_result.stdout.strip()}")
+    create_pull_request(repo_path, repo_name, branch_name, pr_title, pr_body)
     return True
 
 
