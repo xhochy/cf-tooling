@@ -163,7 +163,7 @@ def run_conda_smithy_rerender(repo_path):
     """
     print("Running conda-smithy rerender...")
     result = subprocess.run(
-        ["conda-smithy", "rerender", "--no-check-uptodate"],
+        ["conda-smithy", "rerender", "--no-check-uptodate", "--commit", "auto"],
         cwd=repo_path,
         capture_output=True,
         text=True
@@ -175,27 +175,6 @@ def run_conda_smithy_rerender(repo_path):
         return False
 
     print("Rerender completed successfully")
-
-    # Check if there are changes to commit
-    status_result = subprocess.run(
-        ["git", "-C", repo_path, "status", "--porcelain"],
-        capture_output=True,
-        text=True,
-        check=True
-    )
-
-    if status_result.stdout.strip():
-        print("Committing rerender changes...")
-        subprocess.run(
-            ["git", "-C", repo_path, "add", "-A"],
-            check=True
-        )
-        subprocess.run(
-            ["git", "-C", repo_path, "commit", "-m", "MNT: Re-rendered with conda-smithy"],
-            check=True
-        )
-    else:
-        print("No changes from rerender to commit")
 
     return True
 
