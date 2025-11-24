@@ -26,6 +26,62 @@ Dependencies are defined in `pixi.toml` and include:
 
 ## Key Tools
 
+### feedstock_utils.py
+
+Shared utility module providing common functions for feedstock automation:
+
+**Common operations:**
+- `get_github_tags(owner, repo)` - Fetch all tags from a GitHub repository with pagination
+- `get_current_version_from_recipe(repo_path)` - Extract version from recipe.yaml or meta.yaml
+- `fork_and_clone_feedstock(repo_name, repo_path)` - Fork and clone a feedstock if needed
+- `checkout_branch(repo_path, branch_name)` - Checkout and pull a branch from upstream
+- `create_update_branch(repo_path, branch_name)` - Create a new branch for updates
+- `commit_changes(repo_path, files, message)` - Stage and commit specified files
+- `run_conda_smithy_rerender(repo_path)` - Run conda-smithy rerender and commit changes
+- `push_branch(repo_path, branch_name)` - Push a branch to origin (fork)
+- `create_pull_request(repo_path, repo_name, base_branch, title, body)` - Create a PR via GitHub CLI
+- `check_version_needs_update(current_version, new_version)` - Compare versions to determine if update is needed
+
+**Design principles:**
+- Handles both recipe.yaml (newer format) and meta.yaml (Jinja2 format)
+- Uses subprocess for git operations with relative paths (git -C)
+- Provides consistent error handling and logging
+- Returns boolean/data to allow callers to handle errors appropriately
+
+### update_go_releases.py
+
+Automates Go feedstock updates across multiple minor series (1.20.x, 1.21.x, etc.).
+
+**Key features:**
+- Fetches latest patch versions from golang/go GitHub tags
+- Updates both go-feedstock and go-activation-feedstock
+- Downloads distribution files to compute SHA256 hashes
+- Supports multiple Go distributions (source, linux, windows, darwin for amd64/arm64)
+- Creates PRs to minor-series-specific branches (e.g., 1.20.x, 1.21.x)
+
+**Usage:**
+```bash
+pixi run python update_go_releases.py           # Run updates
+pixi run python update_go_releases.py --dry-run # Preview changes
+```
+
+### update_nodejs_releases.py
+
+Automates Node.js feedstock updates across multiple minor series (20.x, 22.x).
+
+**Key features:**
+- Fetches latest patch versions from nodejs/node GitHub tags
+- Updates nodejs-feedstock for LTS versions
+- Fetches SHA256 hashes from nodejs.org SHASUMS256.txt
+- Handles both recipe.yaml (newer) and meta.yaml (older) formats
+- Creates PRs to minor-series-specific branches (e.g., 20.x, 22.x)
+
+**Usage:**
+```bash
+pixi run python update_nodejs_releases.py           # Run updates
+pixi run python update_nodejs_releases.py --dry-run # Preview changes
+```
+
 ### make_aws_migration.py
 
 Automates the creation of AWS C library migration PRs for conda-forge-pinning-feedstock:
