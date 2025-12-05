@@ -133,7 +133,7 @@ for package, version in updated_packages.items():
     pr_body += f"- {package}: {version}\n"
 
 pr_result = subprocess.run(
-    ["gh", "pr", "create", "-R", repo_name, "--title", pr_title, "--body", pr_body],
+    ["gh", "pr", "create", "-R", repo_name, "--title", pr_title, "--body", pr_body, "--label", "automerge"],
     cwd=repo_path,
     capture_output=True,
     text=True,
