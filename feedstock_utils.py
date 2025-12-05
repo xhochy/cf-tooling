@@ -194,7 +194,7 @@ def push_branch(repo_path, branch_name):
     )
 
 
-def create_pull_request(repo_path, repo_name, base_branch, title, body):
+def create_pull_request(repo_path, repo_name, base_branch, title, body, automerge: True):
     """
     Create a pull request using GitHub CLI.
     
@@ -209,12 +209,15 @@ def create_pull_request(repo_path, repo_name, base_branch, title, body):
         PR URL as string
     """
     print("Creating pull request...")
+    args:list[str] = []
+    if automerge:
+        args.extend("--label", "automerge")
     pr_result = subprocess.run(
         ["gh", "pr", "create",
          "-R", repo_name,
          "--base", base_branch,
          "--title", title,
-         "--body", body],
+         "--body", body] + args,
         cwd=repo_path,
         capture_output=True,
         text=True,
