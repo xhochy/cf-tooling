@@ -257,14 +257,24 @@ def update_feedstock(feedstock_name, minor_series, new_version, dry_run=False):
                 line = re.sub(r'(\s+number:\s*)\d+', r'\g<1>0', line)
                 print(f"  Reset build number")
 
-            # Update sha256 (assuming single source for meta.yaml)
-            elif 'unix' in sha256_mappings and re.match(r'\s+sha256:\s*[a-fA-F0-9]{64}', line):
-                line = re.sub(
-                    r'(\s+sha256:\s*)[a-fA-F0-9]{64}',
-                    rf'\g<1>{sha256_mappings["unix"]}',
-                    line
-                )
-                print(f"  Updated sha256")
+            # Update sha256 based on platform selector
+            elif re.match(r'\s+sha256:\s*[a-fA-F0-9]{64}', line):
+                # Detect platform from inline selector comment
+                platform_key = None
+                if '# [unix]' in line or '# [not win]' in line:
+                    platform_key = 'unix'
+                elif '# [target_platform == "win-64"]' in line or '# [win64]' in line:
+                    platform_key = 'win-x64'
+                elif '# [target_platform == "win-arm64"]' in line or '# [win-arm64]' in line:
+                    platform_key = 'win-arm64'
+
+                if platform_key and platform_key in sha256_mappings:
+                    line = re.sub(
+                        r'(\s+sha256:\s*)[a-fA-F0-9]{64}',
+                        rf'\g<1>{sha256_mappings[platform_key]}',
+                        line
+                    )
+                    print(f"  Updated sha256 for {platform_key}")
 
         updated_lines.append(line)
 
