@@ -211,10 +211,10 @@ def update_feedstock(feedstock_name, minor_series, new_version, dry_run=False):
         if is_recipe_yaml:
             # For recipe.yaml format
             # Update version in context section
-            if re.match(r'^\s*version:\s*[0-9.]+', line):
+            if re.match(r'^\s*version:\s*["\']?[0-9.]+', line):
                 line = re.sub(
-                    r'(^\s*version:\s*)[0-9.]+',
-                    rf'\g<1>{new_version}',
+                    r'(^\s*version:\s*["\']?)[0-9.]+(["\']?)',
+                    rf'\g<1>{new_version}\g<2>',
                     line
                 )
                 print(f"  Updated version")
@@ -294,7 +294,7 @@ Changes:
 - Re-rendered with conda-smithy
 """
 
-    create_pull_request(repo_path, repo_name, branch_name, pr_title, pr_body)
+    create_pull_request(repo_path, repo_name, branch_name, pr_title, pr_body, automerge=True)
     return True
 
 
@@ -311,7 +311,8 @@ def main():
     # Define target minor series for Node.js LTS versions
     # 20.x = Iron LTS (until April 2026)
     # 22.x = Jill LTS (until April 2027)
-    target_series = ['20', '22']
+    # 24.x = Krypton LTS (until April 2028)
+    target_series = ['20', '22', '24']
 
     # Get latest versions from GitHub for each series
     latest_github_versions = get_nodejs_versions_by_minor_series(target_series)

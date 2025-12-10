@@ -211,7 +211,7 @@ def create_pull_request(repo_path, repo_name, base_branch, title, body, automerg
     print("Creating pull request...")
     args:list[str] = []
     if automerge:
-        args.extend("--label", "automerge")
+        args.extend(["--label", "automerge"])
     pr_result = subprocess.run(
         ["gh", "pr", "create",
          "-R", repo_name,
