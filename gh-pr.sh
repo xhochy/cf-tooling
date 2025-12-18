@@ -1,4 +1,5 @@
-#!/bin/zsh
+#!/usr/bin/env bash
+# Compatible with both Bash and Zsh
 
 gh-pr() {
     # Check if a URL was provided
@@ -11,7 +12,12 @@ gh-pr() {
     local url="$1"
 
     # Strip fragment (everything from # onwards)
-    url="${url%%\#*}"
+    # Zsh requires escaping #, Bash does not
+    if [ -n "$BASH_VERSION" ]; then
+        url="${url%%#*}"
+    else
+        url="${url%%\#*}"
+    fi
 
     # Extract owner, repo, and PR number from URL
     # Expected format: https://github.com/owner/repo/pull/123
@@ -21,9 +27,17 @@ gh-pr() {
         return 1
     fi
 
-    local owner="${match[1]}"
-    local repo="${match[2]}"
-    local pr_number="${match[3]}"
+    # Handle both Bash (BASH_REMATCH) and Zsh (match) regex capture arrays
+    local owner repo pr_number
+    if [ -n "$BASH_VERSION" ]; then
+        owner="${BASH_REMATCH[1]}"
+        repo="${BASH_REMATCH[2]}"
+        pr_number="${BASH_REMATCH[3]}"
+    else
+        owner="${match[1]}"
+        repo="${match[2]}"
+        pr_number="${match[3]}"
+    fi
 
     # Check if the repository folder exists
     if [ ! -d "$repo" ]; then
