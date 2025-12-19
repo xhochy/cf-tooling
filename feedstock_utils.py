@@ -53,8 +53,9 @@ def get_current_version_from_recipe(repo_path):
         with open(recipe_yaml_path, "r") as f:
             content = f.read()
 
-        # Look for version in context section: "  version: x.y.z"
-        match = re.search(r'^\s*version:\s*([0-9.]+)', content, re.MULTILINE)
+        # Look for version in context section: "  version: x.y.z" or '  version: "x.y.z"'
+        # Handle both quoted and unquoted versions
+        match = re.search(r'^\s*version:\s*["\']?([0-9.]+)["\']?', content, re.MULTILINE)
         if match:
             return match.group(1)
 
