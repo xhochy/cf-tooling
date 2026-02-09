@@ -304,7 +304,7 @@ Changes:
 - Re-rendered with conda-smithy
 """
 
-    create_pull_request(repo_path, repo_name, branch_name, pr_title, pr_body, automerge=True)
+    create_pull_request(repo_path, repo_name, branch_name, pr_title, pr_body, automerge=False)
     return True
 
 

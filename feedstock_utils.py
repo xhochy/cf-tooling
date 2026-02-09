@@ -195,7 +195,9 @@ def push_branch(repo_path, branch_name):
     )
 
 
-def create_pull_request(repo_path, repo_name, base_branch, title, body, automerge: True):
+def create_pull_request(
+    repo_path, repo_name, base_branch, title, body, automerge: bool = True
+):
     """
     Create a pull request using GitHub CLI.
     
