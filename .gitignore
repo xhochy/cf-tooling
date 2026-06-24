@@ -7,3 +7,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+/conda-forge-pinning-feedstock/
+/go-activation-feedstock/
+/go-feedstock/
+/nodejs-feedstock/
