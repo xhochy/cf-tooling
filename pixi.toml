@@ -6,9 +6,14 @@ platforms = ["osx-arm64"]
 version = "0.1.0"
 
 [tasks]
+make-aws-migration = "python make_aws_migration.py"
+update-go-releases = "python update_go_releases.py"
+update-nodejs-releases = "python update_nodejs_releases.py"
+cf-hf-pi-trace = "python cf-hf-pi-trace.py"
 
 [dependencies]
 python = "3.14.*"
 requests = ">=2.32.5,<3"
 pyyaml = ">=6.0.3,<7"
 packaging = ">=25.0,<26"
+huggingface_hub = ">=1.20.1,<2"
